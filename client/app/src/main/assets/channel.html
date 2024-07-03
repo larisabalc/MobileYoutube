@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Youtube Channel</title>
+
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+        <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css">
+        <link rel="stylesheet" href="file:///android_asset/style.css">
+
+    </head>
+    <body>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="#" onclick="loadMainPage()">YouTube</a>
+                <a class="navbar-brand" href="#" onclick="loadChatPage()">
+                    <i class="fas fa-comments"></i>
+                </a>
+            </div>
+        </nav>
+        <div id="channel-info">
+            <h2 id="channel-name"></h2>
+            <p id="subscribers-count">Subscribers: Loading...</p>
+            <button type="button" class="btn btn-outline-success" onclick="subscribe()">Subscribe</button>
+        </div>
+
+        <div id="videos-container">
+            <h3>Random Videos from the Channel</h3>
+            <div id="videos"></div>
+        </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+    <script>
+        function getParameterByName(name, url) {
+            if (!url) url = window.location.href;
+            name = name.replace(/[\[\]]/g, "\\$&");
+            var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+                results = regex.exec(url);
+            if (!results) return null;
+            if (!results[2]) return '';
+            return decodeURIComponent(results[2].replace(/\+/g, ' '));
+        }
+
+        var channelId = getParameterByName('channelId');
+
+        function sendMessageToServer(action, data) {
+                Android.sendMessageToServer(action, data);
+            }
+
+        function loadMainPage() {
+            sendMessageToServer('loadMainPage', null);
+        }
+
+         function loadChatPage() {
+            sendMessageToServer('loadChatPage', null);
+        }
+
+        var subscribers = 0;
+
+        function fetchChannelInfo() {
+            var apiKey = 'AIzaSyCLCi3mLKDDIdaZDnCfsDZB2rdQKYIOepE';
+            var apiUrl = 'https://www.googleapis.com/youtube/v3/channels';
+
+            var params = {
+                part: 'snippet,statistics',
+                id: channelId,
+                key: apiKey
+            };
+
+            $.get(apiUrl, params, function (data) {
+                if (data.items.length > 0) {
+                    var channelInfo = {
+                        name: data.items[0].snippet.title,
+                        subscribers: data.items[0].statistics.subscriberCount,
+                        thumbnail: data.items[0].snippet.thumbnails.default.url
+                    };
+
+                    document.getElementById('channel-name').innerText = channelInfo.name;
+                    subscribers = data.items[0].statistics.subscriberCount;
+                    document.getElementById('subscribers-count').innerText = 'Subscribers: ' + channelInfo.subscribers;
+
+                    var thumbnailElement = document.createElement('img');
+                    thumbnailElement.src = channelInfo.thumbnail;
+                    thumbnailElement.alt = 'Channel Thumbnail';
+                    thumbnailElement.style.width = '100px';
+                    document.getElementById('channel-info').appendChild(thumbnailElement);
+
+                    sendMessageToServer('fetchRandomVideos', null);
+                }
+            });
+        }
+
+        sendMessageToServer('fetchChannelInfo', null);
+
+        function fetchRandomVideos() {
+            var apiKey = 'AIzaSyCLCi3mLKDDIdaZDnCfsDZB2rdQKYIOepE';
+            var apiUrl = 'https://www.googleapis.com/youtube/v3/search';
+
+            var params = {
+                part: 'snippet',
+                channelId: channelId,
+                order: 'date',
+                maxResults: 3,
+                type: 'video',
+                key: apiKey
+            };
+
+            $.get(apiUrl, params, function (data) {
+                if (data.items.length > 0) {
+                    var videosHtml = data.items.map(function (item) {
+                        var videoId = item.id.videoId;
+                        var videoTitle = item.snippet.title;
+                        var videoThumbnail = item.snippet.thumbnails.default.url;
+
+                        return '<div class="video-item">' +
+                            '<img src="' + videoThumbnail + '" alt="Video Thumbnail" class="video-thumbnail">' +
+                            '<p class="video-title">' + videoTitle + '</p>' +
+                            '<a href="video.html?videoId=' + videoId + '" class="watch-video-link">Watch Video</a>' +
+                            '</div>';
+                    });
+
+                    document.getElementById('videos').innerHTML = videosHtml.join('');
+                }
+            });
+        }
+
+        function subscribe() {
+            sendMessageToServer('subscribe', null);
+        }
+
+        function subscribeAction() {
+            subscribers++;
+            document.getElementById('subscribers-count').innerText = 'Subscribers: ' + subscribers;
+        }
+    </script>
+    </body>
+</html>

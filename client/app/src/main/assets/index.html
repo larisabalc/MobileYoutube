@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>YouTube Home</title>
+
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+        <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css">
+        <link rel="stylesheet" href="file:///android_asset/style.css">
+
+    </head>
+    <body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#" onclick="loadMainPage()">YouTube</a>
+            <a class="navbar-brand" href="#" onclick="loadChatPage()">
+                <i class="fas fa-comments"></i>
+            </a>
+
+            <form class="d-flex">
+                <input class="form-control me-2" type="search" placeholder="Search..." id="searchInput">
+                <button class="btn btn-outline-success " type="button" onclick="searchVideos()">Search</button>
+            </form>
+        </div>
+    </nav>
+
+    <div id="videos"></div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+    <script>
+            var tag = document.createElement('script');
+            tag.src = "https://www.youtube.com/iframe_api";
+            var firstScriptTag = document.getElementsByTagName('script')[0];
+            firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+            var players = [];
+            var playlistId = 'PLlkEpvHS6YNdGpsU4V9ixlTxxqV5tNBCT';
+
+            function sendMessageToServer(action, data) {
+                Android.sendMessageToServer(action, data);
+            }
+
+            function loadMainPage() {
+                sendMessageToServer('loadMainPage', null);
+            }
+
+             function loadChatPage() {
+                sendMessageToServer('loadChatPage', null);
+            }
+
+            function onYouTubeIframeAPIReady() {
+                sendMessageToServer('loadVideos', null);
+            }
+
+            var searching = false;
+
+            function searchVideos() {
+                if (!searching) {
+                    var searchQuery = document.getElementById('searchInput').value;
+                    sendMessageToServer("searchStarted", searchQuery);
+                    searching = true;
+                }
+            }
+
+            function search() {
+                var searchQuery = document.getElementById('searchInput').value;
+
+                if (searchQuery.trim() === "") {
+                    alert("Please enter a search query.");
+                    searching = false;
+                    return;
+                }
+
+                var apiKey = 'AIzaSyCLCi3mLKDDIdaZDnCfsDZB2rdQKYIOepE';
+                var maxResults = 6;
+
+                var apiUrl = 'https://www.googleapis.com/youtube/v3/search';
+                var params = {
+                    part: 'snippet',
+                    q: searchQuery,
+                    type: 'video',
+                    maxResults: maxResults,
+                    key: apiKey
+                };
+
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', apiUrl + '?' + new URLSearchParams(params), true);
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState == 4 && xhr.status == 200) {
+                        var response = JSON.parse(xhr.responseText);
+                        var videoItems = response.items;
+
+                        if (videoItems.length > 0) {
+                            var videos = videoItems.map(function (item) {
+                                return {
+                                    videoId: item.id.videoId,
+                                    title: item.snippet.title
+                                };
+                            });
+
+                        } else {
+                            alert('No videos found for the given search query.');
+                        }
+                        sendMessageToServer("displayVideos", JSON.stringify(videos));
+                        searching = false;
+                    }
+                };
+                xhr.send();
+            }
+
+            function fetchRandomVideosFromPlaylist(numVideos) {
+                var apiKey = 'AIzaSyCLCi3mLKDDIdaZDnCfsDZB2rdQKYIOepE';
+                var apiUrl = 'https://www.googleapis.com/youtube/v3/playlistItems';
+                var params = {
+                    part: 'snippet',
+                    playlistId: playlistId,
+                    maxResults: 50,
+                    key: apiKey
+                };
+
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', apiUrl + '?' + new URLSearchParams(params), true);
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState == 4 && xhr.status == 200) {
+                        var response = JSON.parse(xhr.responseText);
+                        var videoPool = response.items.map(function (item) {
+                            return {
+                                videoId: item.snippet.resourceId.videoId,
+                                title: item.snippet.title
+                            };
+                        });
+
+                        var randomVideoIds = [];
+                        for (var i = 0; i < numVideos; i++) {
+                            var randomIndex = Math.floor(Math.random() * videoPool.length);
+                            randomVideoIds.push(videoPool.splice(randomIndex, 1)[0]);
+                        }
+
+                        sendMessageToServer("displayVideos", JSON.stringify(randomVideoIds));
+                    }
+                };
+                xhr.send();
+            }
+
+            function createPlayer(video, index) {
+                var playerContainer = document.createElement('div');
+                playerContainer.id = 'player' + index;
+                playerContainer.className = 'video';
+
+                var screenHeight = window.innerHeight;
+                var screenWidth = window.innerWidth;
+                var playerHeight = Math.min(screenHeight * 0.3, 390);
+                var playerWidth = Math.min(screenWidth * 0.8, 640);
+
+                playerContainer.style.height = playerHeight + 'px';
+                playerContainer.style.width = playerWidth + 'px';
+
+                document.getElementById('videos').appendChild(playerContainer);
+
+                var player = new YT.Player('player' + index, {
+                    height: playerHeight,
+                    width: playerWidth,
+                    videoId: video.videoId,
+                    playerVars: {
+                        'playsinline': 1
+                    },
+                    events: {
+                        'onReady': onPlayerReady,
+                        'onStateChange': onPlayerStateChange
+                    }
+                });
+
+                var titleButton = document.createElement('button');
+                titleButton.className = 'btn btn-link videoTitle';
+                titleButton.innerHTML = video.title;
+                titleButton.setAttribute('data-video-id', video.videoId);
+
+                document.getElementById('videos').appendChild(titleButton);
+            }
+
+            function displayVideos(videos) {
+                document.getElementById('videos').innerHTML = "";
+
+                videos.forEach(createPlayer);
+            }
+
+            function onPlayerReady(event) {}
+
+            function onPlayerStateChange(event) {}
+
+            document.getElementById('videos').addEventListener('click', function (event) {
+                var clickedElement = event.target;
+
+                if (clickedElement.classList.contains('videoTitle')) {
+                    var videoId = clickedElement.getAttribute('data-video-id');
+                    sendMessageToServer("videoTitleClicked", videoId);
+                }
+            });
+        </script>
+    </body>
+</html>

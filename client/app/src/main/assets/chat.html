@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Chat</title>
+
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+        <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css">
+        <link rel="stylesheet" href="file:///android_asset/style.css">
+
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+                background-color: #E6E1E0;
+                font-family: Calibri, sans-serif;
+            }
+        </style>
+    </head>
+    <body>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="#" onclick="loadMainPage()">YouTube</a>
+                <a class="navbar-brand" href="#" onclick="loadChatPage()">
+                    <i class="fas fa-comments"></i>
+                </a>
+            </div>
+        </nav>
+        <div class="container mt-3 chat-container">
+            <div class="messages-container"></div>
+
+            <div class="input-group input-group-custom">
+                <input type="text" class="form-control message-input" placeholder="Type your message">
+                <div class="input-group-append">
+                    <button class="btn btn-secondary load-image-btn" onclick="loadImage()">
+                        <i class="fas fa-image"></i>
+                    </button>
+                    <button class="btn btn-primary send-btn" onclick="sendMessage()">Send</button>
+                </div>
+            </div>
+        </div>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <script>
+             function sendMessageToServer(action, data) {
+                Android.sendMessageToServer(action, data);
+            }
+
+            function loadMainPage() {
+                sendMessageToServer('loadMainPage', null);
+            }
+
+             function loadChatPage() {
+                sendMessageToServer('loadChatPage', null);
+            }
+
+            const messageInput = document.querySelector(".message-input");
+            const loadImageBtn = document.querySelector(".load-image-btn");
+            const sendBtn = document.querySelector(".send-btn");
+
+            messageInput.addEventListener("input", function() {
+                loadImageBtn.style.display = messageInput.value.trim() === "" ? "block" : "none";
+                sendBtn.style.display = messageInput.value.trim() !== "" ? "block" : "none";
+            });
+
+            function loadImage() {
+                Android.loadImage();
+            }
+
+            function sendMessage() {
+                const messageInput = document.querySelector(".message-input");
+                const message = messageInput.value;
+
+                Android.sendMessage(message);
+
+                messageInput.value = "";
+                sendBtn.style.display = "none";
+                loadImageBtn.style.display = "block"
+            }
+
+            function addMessageToUI(message) {
+                const recyclerView = document.querySelector(".messages-container");
+                const messageElement = document.createElement("div");
+                messageElement.textContent = `${message.name}: ${message.message}`;
+
+                messageElement.classList.add(message.name === "You" ? "sent" : "received");
+
+                recyclerView.appendChild(messageElement);
+            }
+
+            function addImageToUI(message) {
+                const recyclerView = document.querySelector(".messages-container");
+                const imageElement = document.createElement("div");
+                const image = document.createElement("img");
+                image.src = "data:image/jpeg;base64," + message.image;
+                imageElement.appendChild(image);
+
+                imageElement.classList.add(message.name === "You" ? "sent" : "received");
+
+                recyclerView.appendChild(imageElement);
+            }
+        </script>
+    </body>
+</html>

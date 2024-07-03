@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>YouTube Video</title>
+
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+        <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css">
+        <style>
+            body {
+                background-color: #f8f9fa;
+                color: #495057; /* Dark gray text */
+                font-family: 'Arial', sans-serif;
+            }
+
+            .navbar {
+                background-color: #ff0000;
+            }
+
+            .navbar-brand {
+                font-size: 1.5rem;
+                font-weight: bold;
+                color: #fff;
+            }
+
+            #video-container {
+                margin: 20px;
+                padding: 20px;
+                background-color: #d6d8db;
+                box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+                border-radius: 10px;
+            }
+
+            #player {
+                width: 100%;
+                height: 360px;
+            }
+
+            #video-info {
+                margin-top: 20px;
+            }
+
+            h3, h4 {
+                color: #343a40;
+            }
+
+            #video-title {
+                margin-bottom: 10px;
+            }
+
+            #video-channel {
+                cursor: pointer;
+                color: #007bff;
+            }
+
+            #video-channel:hover {
+                text-decoration: underline;
+            }
+
+            #like-count {
+                color: #28a745;
+            }
+
+            .btn-group {
+                margin-top: 10px;
+            }
+
+            .btn-primary {
+                background-color: #6c757d;
+                border-color: #6c757d;
+            }
+
+            .btn-primary:hover {
+                background-color: #495057;
+                border-color: #495057;
+            }
+
+            .btn-danger {
+                color: #6c757d;
+                border-color: #6c757d;
+            }
+
+            .btn-danger:hover {
+                color: #495057;
+                border-color: #495057;
+            }
+
+            #comments {
+                margin-top: 20px;
+                background-color: #d6d8db;
+                padding: 15px;
+                border-radius: 8px;
+            }
+
+            .form-control {
+                border-color: #6c757d;
+            }
+
+            .btn-info {
+                background-color: #6c757d;
+                border-color: #6c757d;
+                color: #ffffff;
+            }
+
+            .btn-info:hover {
+                background-color: #495057;
+                border-color: #495057;
+            }
+        </style>
+    </head>
+
+    <body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#" onclick="loadMainPage()">YouTube</a>
+            <a class="navbar-brand" href="#" onclick="loadChatPage()">
+                <i class="fas fa-comments"></i>
+            </a>
+        </div>
+    </nav>
+    <div id="video-container">
+        <div id="player"></div>
+        <div id="video-info">
+            <h3 id="video-title"></h3>
+            <p id="video-channel" onclick="openChannel()"></p>
+            <p id="like-count">Likes: 0</p>
+
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-primary" onclick="likeVideo()">Like</button>
+                <button type="button" class="btn btn-danger btn-outline-success" onclick="dislikeVideo()">Dislike</button>
+            </div>
+
+            <div class="mt-3">
+                <h4>Comments</h4>
+                <div id="comments"></div>
+                <textarea id="commentInput" class="form-control mt-2" placeholder="Add a comment"></textarea>
+                <button type="button" class="btn btn-outline-success btn-info mt-2" onclick="postComment()">Post Comment</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.min.js"></script>
+    <script>
+            function sendMessageToServer(action, data) {
+                Android.sendMessageToServer(action, data);
+            }
+
+            function loadMainPage() {
+                sendMessageToServer('loadMainPage', null);
+            }
+
+             function loadChatPage() {
+                sendMessageToServer('loadChatPage', null);
+            }
+
+            function openChannel(channelId) {
+                if (channelId) {
+                    sendMessageToServer("openChannel", channelId);
+                }
+            }
+
+            function getParameterByName(name, url) {
+                if (!url) url = window.location.href;
+                name = name.replace(/[\[\]]/g, "\\$&");
+                var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+                    results = regex.exec(url);
+                if (!results) return null;
+                if (!results[2]) return '';
+                return decodeURIComponent(results[2].replace(/\+/g, ' '));
+            }
+
+            var YT;
+            var likeCount = 0;
+            var localLikeCount = 0;
+            var videoId = getParameterByName('videoId');
+
+            function initializeYouTubePlayer() {
+                var screenHeight = window.innerHeight;
+                var screenWidth = window.innerWidth;
+                var playerHeight = Math.min(screenHeight * 0.3, 390);
+                var playerWidth = Math.min(screenWidth * 0.8, 640);
+
+                document.getElementById('player').style.height = playerHeight + 'px';
+                document.getElementById('player').style.width = playerWidth + 'px';
+                return new YT.Player('player', {
+                    height: playerHeight,
+                    width: playerWidth,
+                    videoId: videoId,
+                    playerVars: {
+                        'playsinline': 1
+                    },
+                    events: {
+                        'onReady': onPlayerReady,
+                        'onStateChange': onPlayerStateChange
+                    }
+                });
+            }
+
+            function onPlayerReady(event) {}
+
+            function onPlayerStateChange(event) {}
+
+            function fetchVideoInformation() {
+                //var videoId = getParameterByName('videoId');
+                var apiKey = 'AIzaSyCLCi3mLKDDIdaZDnCfsDZB2rdQKYIOepE';
+                var apiUrl = 'https://www.googleapis.com/youtube/v3/videos';
+                var params = {
+                    part: 'snippet',
+                    id: videoId,
+                    key: apiKey
+                };
+
+                $.get(apiUrl, params, function (data) {
+                    if (data.items.length > 0) {
+                        var videoInfo = data.items[0].snippet;
+                        document.getElementById('video-title').innerText = videoInfo.title;
+
+                        var channelParams = {
+                            part: 'snippet',
+                            id: videoInfo.channelId,
+                            key: apiKey
+                        };
+
+                        $.get('https://www.googleapis.com/youtube/v3/channels', channelParams, function (channelData) {
+                            if (channelData.items.length > 0) {
+                                var channelTitle = channelData.items[0].snippet.title;
+                                document.getElementById('video-channel').innerHTML =
+                                    'Channel: <button class="btn btn-link" onclick="openChannel(\'' + videoInfo.channelId + '\')">' + channelTitle + '</button>';
+                            }
+                        });
+                    }
+                });
+            }
+
+            function onYouTubeIframeAPIReady() {
+                //var videoId = getParameterByName('videoId');
+
+                var player = initializeYouTubePlayer();
+
+                sendMessageToServer('fetchVideoInfo', videoId);
+                sendMessageToServer('fetchComments', videoId);
+                sendMessageToServer('updateLikeCount', null);
+                //fetchVideoInformation();
+                //fetchComments();
+                //updateLikeCount();
+            }
+
+            function fetchComments() {
+                //var videoId = getParameterByName('videoId');
+
+                var apiKey = 'AIzaSyCLCi3mLKDDIdaZDnCfsDZB2rdQKYIOepE';
+                var apiUrl = 'https://www.googleapis.com/youtube/v3/commentThreads';
+                var params = {
+                    part: 'snippet',
+                    videoId: videoId,
+                    key: apiKey
+                };
+
+                $.get(apiUrl, params, function (data) {
+                    if (data.items.length > 0) {
+                        var comments = data.items.map(function (item) {
+                            return {
+                                user: item.snippet.topLevelComment.snippet.authorDisplayName,
+                                comment: item.snippet.topLevelComment.snippet.textDisplay
+                            };
+                        });
+
+                        var commentsHtml = comments.map(function (comment) {
+                            return '<div><strong>' + comment.user + ':</strong> ' + comment.comment + '</div>';
+                        });
+
+                        document.getElementById('comments').innerHTML = commentsHtml.join('');
+                    } else {
+                        document.getElementById('comments').innerHTML = 'No comments available for this video.';
+                    }
+                });
+            }
+
+            function updateLikeCount() {
+                //var videoId = getParameterByName('videoId');
+
+                var apiKey = 'AIzaSyCLCi3mLKDDIdaZDnCfsDZB2rdQKYIOepE';
+                var apiUrl = 'https://www.googleapis.com/youtube/v3/videos';
+                var params = {
+                    part: 'statistics',
+                    id: videoId,
+                    key: apiKey
+                };
+
+                $.get(apiUrl, params, function (data) {
+                    if (data.items.length > 0) {
+                        likeCount = data.items[0].statistics.likeCount;
+                        document.getElementById('like-count').innerText = 'Likes: ' + likeCount;
+                    } else {
+                        document.getElementById('like-count').innerText = 'Likes: Not available';
+                    }
+                });
+            }
+
+            function likeVideo() {
+                sendMessageToServer('like', null);
+            }
+
+            function like() {
+                likeCount++;
+                document.getElementById('like-count').innerText = 'Likes: ' + likeCount;
+
+            }
+
+            function dislikeVideo() {
+                sendMessageToServer('dislike', null);
+            }
+
+            function postComment() {
+                sendMessageToServer('comment', null);
+            }
+
+            function comment() {
+                var comment = document.getElementById('commentInput').value;
+                if (comment.trim() === "") {
+                    alert("Please enter a comment.");
+                    return;
+                }
+
+                var newCommentHtml = '<div><strong>User:</strong> ' + comment + '</div>';
+                document.getElementById('comments').innerHTML += newCommentHtml;
+
+                document.getElementById('commentInput').value = "";
+            }
+        </script>
+    </body>
+</html>

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+        <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css">
+        <link rel="stylesheet" href="file:///android_asset/style.css">
+
+        <style>
+            .form-container {
+                max-width: 400px;
+                width: 100%;
+                padding: 16px;
+                box-sizing: border-box;
+                background-color: #fff;
+                border-radius: 8px;
+                box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                margin-top: 20px;
+            }
+
+            .form-group {
+                margin-bottom: 16px;
+            }
+
+            .input-field {
+                width: 100%;
+                height: 48px;
+                padding: 10px;
+                font-size: 16px;
+                border: 1px solid #ced4da;
+                border-radius: 4px;
+            }
+
+            .submit-btn {
+                width: 100%;
+                background-color: #D53816;
+                color: #ffffff;
+                border: none;
+                padding: 10px;
+                font-size: 16px;
+                cursor: pointer;
+                border-radius: 4px;
+            }
+        </style>
+    </head>
+    <body>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="#" onclick="loadMainPage()">YouTube</a>
+                <a class="navbar-brand" href="#" onclick="loadChatPage()">
+                    <i class="fas fa-comments"></i>
+                </a>
+            </div>
+        </nav>
+        <div class="form-container">
+            <div class="form-group">
+                <input type="text" class="form-control input-field" placeholder="Enter your name">
+            </div>
+            <button class="btn submit-btn" onclick="enterRoom()">Enter room</button>
+        </div>
+
+        <script>
+             function sendMessageToServer(action, data) {
+                Android.sendMessageToServer(action, data);
+            }
+
+            function loadMainPage() {
+                sendMessageToServer('loadMainPage', null);
+            }
+
+             function loadChatPage() {
+                sendMessageToServer('loadChatPage', null);
+            }
+
+            function enterRoom() {
+                var name = document.querySelector(".input-field").value;
+                sendMessageToServer('enterRoom', name);
+            }
+        </script>
+    </body>
+</html>
